@@ -1,0 +1,153 @@
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: {{ include "vault.fullname" $ }}
+  labels:
+    {{- include "vault.labels" $ | nindent 4 }}
+spec:
+  size: {{ .Values.replicaCount }}
+  image: "{{ .Values.vault.image.repository }}:{{ .Values.vault.image.tag | default .Chart.AppVersion }}"
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets: {{ toYaml . | nindent 4 }}
+  {{- end }}
+
+  securityContext: {{ toYaml .Values.securityContext | nindent 4 }}
+
+  {{- with .Values.nodeSelector }}
+  # NodeSelector is Kubernetes NodeSelector definition that should be applied
+  # to all Vault Pods.
+  nodeSelector: {{ toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.affinity }}
+  # Affinity is a group of affinity scheduling rules applied to all Vault Pods.
+  affinity: {{ toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.tolerations }}
+  # If specified, the Vault Pod’s tolerations.
+  tolerations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.vaultAnnotations }}
+  # Vault Pods , Services and TLS Secret annotations
+  vaultAnnotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.vaultConfigurerAnnotations }}
+  # Vault Configurer Pods and Services annotations
+  vaultConfigurerAnnotations: {{ toYaml . | nindent 4 }}
+  {{- end }}
+
+  # Specify the ServiceAccount where the Vault Pod and the Bank-Vaults
+  # configurer/unsealer is running
+  serviceAccount: {{ include "vault.serviceAccountName" $ }}
+
+  # Specify the Service's type where the Vault Service is exposed
+  # Please note that some Ingress controllers like
+  # https://github.com/kubernetes/ingress-gce
+  # forces you to expose your Service on a NodePort
+  serviceType: {{ .Values.service.type }}
+
+  # Use local disk to store Vault raft data, see config section.
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-raft
+      spec:
+        # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+        storageClassName: {{ .Values.vault.persistence.storageClass }}
+        accessModes:
+          - ReadWriteOnce
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: {{ .Values.vault.persistence.size }}
+
+  volumeMounts:
+    - name: vault-raft
+      mountPath: /vault/file
+
+  # We need to add this configuration for backup and restore using Velero.
+  # When enabled, this will add Velero fsfreeze sidecar container and
+  # supporting hook annotations to Vault Pods:
+  # https://velero.io/docs/v1.2.0/hooks/
+  veleroEnabled: {{ .Values.velero.enabled }}
+
+  # Support for distributing the generated CA certificate Secret to other
+  # namespaces.
+  # Define a list of namespaces or use ["*"] for all namespaces.
+  caNamespaces: {{ include "vault.tlsCertDistributionNamespaces" $}}
+
+  # Describe where you would like to store the Vault unseal keys and root token.
+  unsealConfig:
+    options:
+      # The preFlightChecks flag enables unseal and root token storage tests.
+      # This is true by default when not specified.
+      preFlightChecks: true
+      # The storeRootToken flag enables storing of root token in chosen storage.
+      # This is true by default when not specified.
+      storeRootToken: true
+      # The secretShares represents the total number of unseal key shares
+      # This is 5 by default when not specified.
+      secretShares: {{ .Values.unsealConfig.secretShares }}
+      # The secretThreshold represents the minimum number of shares required to
+      # reconstruct the unseal key. This must be less than or equal to
+      # secretShares.
+      # This is 3 by default when not specified.
+      secretThreshold: {{ .Values.unsealConfig.secretThreshold }}
+    kubernetes:
+      secretNamespace: {{ .Release.Namespace }}
+
+  # ExistingTLSSecretName is name of the secret that contains a TLS server
+  # certificate and key and the corresponding CA certificate. Required secret
+  # format kubernetes.io/tls type secret keys + ca.crt key If it is set,
+  # generating certificate will be disabled. default: ""
+  {{- if and (hasKey .Values "tls") (hasKey .Values.tls "secretName") (ne .Values.tls.secretName "")}}
+  existingTlsSecretName: {{ .Values.tls.secretName }}
+  {{- end }}
+
+  # A YAML representation of a final vault config file.
+  # See https://www.vaultproject.io/docs/configuration/ for more information.
+  config:
+    storage:
+      raft:
+        path: /vault/file
+    listener:
+      tcp:
+        address: 0.0.0.0:{{ .Values.vault.apiPort }}
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    api_addr: https://{{ include "vault.fullname" $ }}.{{ .Release.Namespace }}:{{ .Values.vault.apiPort }}
+    cluster_addr: https://${.Env.POD_NAME}:{{ .Values.vault.clusterPort }}
+    ui: true
+
+  statsdDisabled: true
+
+  # This is for registering the Vault to Vault Kubernetes Service (svc)
+  serviceRegistrationEnabled: true
+
+  # Check if the resources are enough for your use case
+  resources:
+    # A YAML representation of resource ResourceRequirements for vault
+    # container.
+    # Reference: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container
+    vault:
+      {{- toYaml .Values.vault.resources | nindent 6 }}
+
+  # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
+  # The repository also contains a lot examples in the test/deploy and
+  # operator/deploy directories.
+  externalConfig:
+    {{- with .Values.vaultPolicies }}
+    policies: {{ toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.vaultAuthMethods }}
+    auth: {{ toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.vaultSecretEngines }}
+    secrets: {{ toYaml . | nindent 6 }}
+    {{- end }}
+
+  {{- with .Values.vaultEnvsConfig }}
+  vaultEnvsConfig: {{ toYaml . | nindent 4 }}
+  {{- end }}

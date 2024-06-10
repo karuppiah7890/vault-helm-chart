@@ -1,0 +1,70 @@
+# TODO: Make changes to this to access the vault :)
+# Put things like - how to get the vault unseal tokens, root token,
+# how to debug, how to port forward, how to access the vault
+
+1. Get the Vault Web UI URL by running these commands:
+{{- if .Values.ingresses }}
+  Looks like you have ingress(es) defined, so, here you go -
+{{- range $ingress := .Values.ingresses }}
+{{- range $host := .hosts }}
+  {{- range .paths }}
+  http{{ if $ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+  If you want to work with the Kubernetes Service, then -
+
+{{- if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "vault.fullname" $ }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  You can watch the status of it by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "vault.fullname" $ }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "vault.fullname" $ }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  You can use the Kubernetes ClusterIP Service and port forward using that like this -
+
+  export SERVICE_NAME=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "vault.fullname" $ }})
+  echo "Visit http://127.0.0.1:8080 to use your Vault"
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/$SERVICE_NAME 8080:8200
+
+{{- end }}
+
+  Also, You can always use the Pod running the Vault and port forward to that too, like this -
+
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "vault.name" $ }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your Vault"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+
+2. Here is an example of how to access the Vault instance using the Vault CLI when using port forwarding to any of the Vault Pods or the Vault Kubernetes Service -
+
+  export VAULT_ADDR='https://127.0.0.1:8200' # Use appropriate port here
+
+  You can use the Vault ingress host name too in the `VAULT_ADDR` environment variable
+
+  export VAULT_TOKEN=$(kubectl get secret --namespace {{ .Release.Namespace }} {{ include "vault.fullname" $ }}-unseal-keys -o jsonpath={.data.vault-root} | base64 --decode)
+
+  # Store the CA certificate for Vault inside a file and store that in $VAULT_CACERT environment variable
+
+  # When using auto generated TLS/SSL Certificates and directly accessing Vault through Pod or Kubernetes Service, you can do this -
+
+  kubectl get secret --namespace {{ .Release.Namespace }} {{ include "vault.fullname" $ }}-tls -o jsonpath="{.data.ca\.crt}" | base64 --decode > $PWD/vault-ca.crt
+  export VAULT_CACERT=$PWD/vault-ca.crt
+
+  # You can do something similar to the above even when using an existing secret, just replace the secret name with the existing secret name
+
+  # OR you can skip TLS/SSL Certificate verification like below but it is NOT recommended
+  # export VAULT_SKIP_VERIFY=true
+
+  Finally, you can use the Vault CLI :)
+
+  vault status
+
+  vault operator members
+
+  vault operator raft list-peers
