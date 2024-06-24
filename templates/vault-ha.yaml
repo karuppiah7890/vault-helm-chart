@@ -117,9 +117,22 @@ spec:
         address: 0.0.0.0:{{ .Values.vault.apiPort }}
         tls_cert_file: /vault/tls/server.crt
         tls_key_file: /vault/tls/server.key
+        {{- if .Values.vaultMetrics.enabled }}
+        telemetry:
+          unauthenticated_metrics_access: true
+        {{- end }}
+    {{- if .Values.vaultMetrics.enabled }}
+    telemetry:
+      disable_hostname: true
+      prometheus_retention_time: 30s
+    {{- end }}
     api_addr: https://{{ include "vault.fullname" $ }}.{{ .Release.Namespace }}:{{ .Values.vault.apiPort }}
     cluster_addr: https://${.Env.POD_NAME}:{{ .Values.vault.clusterPort }}
     ui: true
+
+  {{ if .Values.vaultMetrics.enabled }}
+  serviceMonitorEnabled: true
+  {{- end }}
 
   statsdDisabled: true
 

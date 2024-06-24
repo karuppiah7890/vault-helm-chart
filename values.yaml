@@ -9,6 +9,9 @@
 
 replicaCount: 3
 
+vaultMetrics:
+  enabled: true
+
 # Vault TLS related configuration
 tls: {}
   # The name of the secret that contains a TLS server certificate, key, and the corresponding CA certificate. The secret must be in the kubernetes.io/tls type secret keys + ca.crt key format.
