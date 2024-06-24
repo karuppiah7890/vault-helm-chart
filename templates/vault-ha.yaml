@@ -117,7 +117,7 @@ spec:
         address: 0.0.0.0:{{ .Values.vault.apiPort }}
         tls_cert_file: /vault/tls/server.crt
         tls_key_file: /vault/tls/server.key
-        {{- if .Values.vaultMetrics.enabled }}
+        {{- if and .Values.vaultMetrics.enabled .Values.vaultMetrics.unauthenticatedAccess }}
         telemetry:
           unauthenticated_metrics_access: true
         {{- end }}

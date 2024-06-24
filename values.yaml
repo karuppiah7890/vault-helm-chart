@@ -11,6 +11,7 @@ replicaCount: 3
 
 vaultMetrics:
   enabled: true
+  unauthenticatedAccess: true
 
 # Vault TLS related configuration
 tls: {}
