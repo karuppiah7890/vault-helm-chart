@@ -124,7 +124,7 @@ spec:
     {{- if .Values.vaultMetrics.enabled }}
     telemetry:
       disable_hostname: true
-      prometheus_retention_time: 30s
+      prometheus_retention_time: {{ default "30s" .Values.vaultMetrics.prometheusRetentionTime }}
     {{- end }}
     api_addr: https://{{ include "vault.fullname" $ }}.{{ .Release.Namespace }}:{{ .Values.vault.apiPort }}
     cluster_addr: https://${.Env.POD_NAME}:{{ .Values.vault.clusterPort }}

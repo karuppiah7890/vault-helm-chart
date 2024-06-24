@@ -12,6 +12,7 @@ replicaCount: 3
 vaultMetrics:
   enabled: true
   unauthenticatedAccess: true
+  prometheusRetentionTime: 30s
 
 # Vault TLS related configuration
 tls: {}
