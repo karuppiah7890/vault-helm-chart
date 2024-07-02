@@ -1,11 +1,11 @@
 {{- $fullName := include "vault.fullname" $ -}}
 {{- $svcPort := .Values.vault.apiPort -}}
-{{- range .Values.ingresses }}
+{{- range $index, $ingress := .Values.ingresses }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $fullName }}
+  name: {{ $fullName }}-{{ $index }}
   labels:
     {{- include "vault.labels" $ | nindent 4 }}
   {{- with .annotations }}
