@@ -1,3 +1,9 @@
+# See https://bank-vaults.dev/docs/ for more information
+# The Vault Operator repository (https://github.com/bank-vaults/vault-operator) contains a lot Vault Custom Resource examples in the `./test/deploy` (https://github.com/bank-vaults/vault-operator/tree/main/test/deploy) and
+# `./deploy` (https://github.com/bank-vaults/vault-operator/tree/main/deploy) directories.
+# There are many `examples` directories too, one inside `./deploy` at `./deploy/examples` (https://github.com/bank-vaults/vault-operator/tree/main/deploy/examples)
+# and another at the project root level at `./examples` (https://github.com/bank-vaults/vault-operator/tree/main/examples)
+# One can also read the docs at https://banzaicloud.com/docs/
 apiVersion: vault.banzaicloud.com/v1alpha1
 kind: Vault
 metadata:
@@ -147,9 +153,8 @@ spec:
     vault:
       {{- toYaml .Values.vault.resources | nindent 6 }}
 
-  # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration
-  # The repository also contains a lot examples in the test/deploy and
-  # operator/deploy directories.
+  # See: https://banzaicloud.com/docs/bank-vaults/cli-tool/#example-external-vault-configuration for examples and information.
+  # Also, one can check https://github.com/bank-vaults/bank-vaults/blob/main/vault-config.yml
   externalConfig:
     {{- with .Values.vaultPolicies }}
     policies: {{ toYaml . | nindent 6 }}
