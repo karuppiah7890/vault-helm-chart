@@ -54,6 +54,20 @@ vaultSecretEngines: []
   #   options:
   #     version: 2
 
+# Allows configuring Audit Devices in Vault (File, Syslog, Socket).
+# See https://www.vaultproject.io/docs/audit/ for more information.
+# Check `audit` field in https://github.com/bank-vaults/bank-vaults/blob/main/vault-config.yml
+# for documentation on how this field's structure should look like
+vaultAuditDevices: []
+  # - type: file
+  #   description: "File based audit logging device to send logs to standard output (stdout)"
+  #   options:
+  #     file_path: stdout
+  # - type: file
+  #   description: "File based audit logging device"
+  #   options:
+  #     file_path: /tmp/vault.log
+
 # Vault Envs configuration
 vaultEnvsConfig: []
   # - name: VAULT_LOG_LEVEL

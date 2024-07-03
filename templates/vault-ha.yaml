@@ -160,6 +160,9 @@ spec:
     {{- with .Values.vaultSecretEngines }}
     secrets: {{ toYaml . | nindent 6 }}
     {{- end }}
+    {{- with .Values.vaultAuditDevices }}
+    audit: {{ toYaml . | nindent 6 }}
+    {{- end }}
 
   {{- with .Values.vaultEnvsConfig }}
   vaultEnvsConfig: {{ toYaml . | nindent 4 }}
